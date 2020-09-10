@@ -26,6 +26,7 @@ import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.util.IoUtils;
 
 import java.io.File;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.crypto.Cipher;
 
 import static java.util.Arrays.asList;
 import static org.briarproject.bramble.api.crypto.CryptoConstants.MAX_AGREEMENT_PUBLIC_KEY_BYTES;
@@ -242,5 +245,14 @@ public class TestUtils {
 		String optionalTests = System.getenv("OPTIONAL_TESTS");
 		return optionalTests != null &&
 				asList(optionalTests.split(",")).contains(testClass.getName());
+	}
+
+	public static boolean isCryptoStrengthUnlimited() {
+		try {
+			return Cipher.getMaxAllowedKeyLength("AES/CBC/PKCS5Padding")
+					== Integer.MAX_VALUE;
+		} catch (NoSuchAlgorithmException e) {
+			throw new AssertionError();
+		}
 	}
 }
