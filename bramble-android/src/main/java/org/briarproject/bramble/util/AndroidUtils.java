@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.os.Build;
+import android.os.Looper;
 import android.provider.Settings;
 
 import org.briarproject.bramble.api.Pair;
@@ -121,5 +122,9 @@ public class AndroidUtils {
 	public static String[] getSupportedImageContentTypes() {
 		if (SDK_INT < 24) return new String[] {"image/jpeg", "image/png"};
 		else return new String[] {"image/jpeg", "image/png", "image/gif"};
+	}
+
+	public static boolean isUiThread() {
+		return Looper.myLooper() == Looper.getMainLooper();
 	}
 }
