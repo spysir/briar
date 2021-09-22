@@ -14,4 +14,6 @@ public interface FeatureFlags {
 	boolean shouldEnableTransferData();
 
 	boolean shouldEnableShareAppViaOfflineHotspot();
+
+	boolean shouldEnablePersistentLogs();
 }

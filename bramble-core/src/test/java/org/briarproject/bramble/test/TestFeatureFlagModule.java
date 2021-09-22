@@ -34,6 +34,11 @@ public class TestFeatureFlagModule {
 			public boolean shouldEnableShareAppViaOfflineHotspot() {
 				return true;
 			}
+
+			@Override
+			public boolean shouldEnablePersistentLogs() {
+				return true;
+			}
 		};
 	}
 }
