@@ -1,0 +1,10 @@
+ControlPort 59051
+CookieAuthentication 1
+DisableNetwork 1
+RunAsDaemon 1
+SafeSocks 1
+SocksPort 59050
+
+GeoIPFile C:\Users\Test\.briar\tor\geoip
+GeoIPv6File C:\Users\Test\.briar\tor\geoip6
+DataDirectory C:\Users\Test\.briar\tor\.tor
