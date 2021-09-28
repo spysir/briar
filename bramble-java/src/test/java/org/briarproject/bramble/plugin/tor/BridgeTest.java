@@ -93,7 +93,7 @@ public class BridgeTest extends BrambleTestCase {
 	private final String bridge;
 	private final AtomicInteger failures;
 
-	private UnixTorPluginFactory factory;
+	private DesktopTorPluginFactory factory;
 
 	public BridgeTest(Params params) {
 		bridge = params.bridge;
@@ -138,7 +138,7 @@ public class BridgeTest extends BrambleTestCase {
 				return singletonList(bridge);
 			}
 		};
-		factory = new UnixTorPluginFactory(ioExecutor, wakefulIoExecutor,
+		factory = new DesktopTorPluginFactory(ioExecutor, wakefulIoExecutor,
 				networkManager, locationUtils, eventBus, torSocketFactory,
 				backoffFactory, resourceProvider, bridgeProvider,
 				batteryManager, clock, torDir, DEFAULT_SOCKS_PORT,
