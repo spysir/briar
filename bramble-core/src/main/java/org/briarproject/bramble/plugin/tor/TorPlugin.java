@@ -52,6 +52,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -106,6 +108,17 @@ import static org.briarproject.bramble.util.StringUtils.isNullOrEmpty;
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
 abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
+
+	/*
+	TODO:
+	- tor vs tor.exe
+	- RunAsDaemon on Linux and new Runnable on Windows
+	- pb.redirectErrorStream on Linux, too?
+	- properly handle and throw PluginExceptions etc.
+	- install correct obfs4proxy binary
+	- absolute paths in Windows torrc (Linux too?)
+	- don't do 10 seconds sleep in main thread
+	 */
 
 	private static final Logger LOG = getLogger(TorPlugin.class.getName());
 
@@ -199,7 +212,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 	}
 
 	protected File getTorExecutableFile() {
-		return new File(torDirectory, "tor");
+		return new File(torDirectory, "tor.exe");
 	}
 
 	protected File getObfs4ExecutableFile() {
@@ -242,55 +255,59 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 		String torPath = torFile.getAbsolutePath();
 		String configPath = configFile.getAbsolutePath();
 		String pid = String.valueOf(getProcessId());
-		Process torProcess;
-		ProcessBuilder pb =
-				new ProcessBuilder(torPath, "-f", configPath, OWNER, pid);
-		Map<String, String> env = pb.environment();
-		env.put("HOME", torDirectory.getAbsolutePath());
-		pb.directory(torDirectory);
+		Executors.newSingleThreadExecutor().execute(new Runnable() {
+			@Override
+			public void run() {
+				Process torProcess;
+				ProcessBuilder pb =
+						new ProcessBuilder(torPath, "-f", configPath, OWNER, pid);
+				pb.redirectErrorStream(true); // logged only first line on Windows otherwise
+				Map<String, String> env = pb.environment();
+				env.put("HOME", torDirectory.getAbsolutePath());
+				pb.directory(torDirectory);
+				try {
+					torProcess = pb.start();
+					// Log the process's standard output until it detaches
+					if (LOG.isLoggable(INFO)) {
+						Scanner stdout = new Scanner(torProcess.getInputStream());
+						while (stdout.hasNextLine()) {
+							if (stdout.hasNextLine()) {
+								LOG.info(stdout.nextLine());
+							}
+						}
+						stdout.close();
+					}
+					try {
+						// Wait for the process to detach or exit
+						int exit = torProcess.waitFor();
+						if (exit != 0) {
+							if (LOG.isLoggable(WARNING))
+								LOG.warning("Tor exited with value " + exit);
+						}
+						// Wait for the auth cookie file to be created/updated
+						long start = clock.currentTimeMillis();
+						while (cookieFile.length() < 32) {
+							if (clock.currentTimeMillis() - start > COOKIE_TIMEOUT_MS) {
+								LOG.warning("Auth cookie not created");
+								if (LOG.isLoggable(INFO)) listFiles(torDirectory);
+							}
+							Thread.sleep(COOKIE_POLLING_INTERVAL_MS);
+						}
+						LOG.info("Auth cookie created");
+					} catch (InterruptedException e) {
+						LOG.warning("Interrupted while starting Tor");
+						Thread.currentThread().interrupt();
+						e.printStackTrace();
+					}
+				} catch (SecurityException | IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 		try {
-			torProcess = pb.start();
-		} catch (SecurityException | IOException e) {
-			throw new PluginException(e);
-		}
-		// Log the process's standard output until it detaches
-		if (LOG.isLoggable(INFO)) {
-			Scanner stdout = new Scanner(torProcess.getInputStream());
-			Scanner stderr = new Scanner(torProcess.getErrorStream());
-			while (stdout.hasNextLine() || stderr.hasNextLine()) {
-				if (stdout.hasNextLine()) {
-					LOG.info(stdout.nextLine());
-				}
-				if (stderr.hasNextLine()) {
-					LOG.info(stderr.nextLine());
-				}
-			}
-			stdout.close();
-			stderr.close();
-		}
-		try {
-			// Wait for the process to detach or exit
-			int exit = torProcess.waitFor();
-			if (exit != 0) {
-				if (LOG.isLoggable(WARNING))
-					LOG.warning("Tor exited with value " + exit);
-				throw new PluginException();
-			}
-			// Wait for the auth cookie file to be created/updated
-			long start = clock.currentTimeMillis();
-			while (cookieFile.length() < 32) {
-				if (clock.currentTimeMillis() - start > COOKIE_TIMEOUT_MS) {
-					LOG.warning("Auth cookie not created");
-					if (LOG.isLoggable(INFO)) listFiles(torDirectory);
-					throw new PluginException();
-				}
-				Thread.sleep(COOKIE_POLLING_INTERVAL_MS);
-			}
-			LOG.info("Auth cookie created");
+			TimeUnit.SECONDS.sleep(10);
 		} catch (InterruptedException e) {
-			LOG.warning("Interrupted while starting Tor");
-			Thread.currentThread().interrupt();
-			throw new PluginException();
+			e.printStackTrace();
 		}
 		try {
 			// Open a control connection and authenticate using the cookie file
@@ -367,7 +384,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 
 	protected void installObfs4Executable() throws IOException {
 		if (LOG.isLoggable(INFO))
-			LOG.info("Installing obfs4proxy binary for " + architecture);
+			LOG.info("Installing obfs4proxy binary for " + "linux-x86_64");
 		File obfs4File = getObfs4ExecutableFile();
 		extract(getObfs4InputStream(), obfs4File);
 		if (!obfs4File.setExecutable(true, true)) throw new IOException();
@@ -391,7 +408,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 
 	private InputStream getObfs4InputStream() throws IOException {
 		InputStream in = resourceProvider
-				.getResourceInputStream("obfs4proxy_" + architecture, ".zip");
+				.getResourceInputStream("obfs4proxy_" + "linux-x86_64", ".zip");
 		ZipInputStream zin = new ZipInputStream(in);
 		if (zin.getNextEntry() == null) throw new IOException();
 		return zin;
