@@ -135,7 +135,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 	private final int maxIdleTime;
 	private final int socketTimeout;
 	final File torDirectory;
-	private final File geoIpFile;
+	final File geoIpFile;
 	final File configFile;
 	private int torSocksPort;
 	private int torControlPort;
@@ -409,7 +409,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 		strb.append("\n");
 	}
 
-	private InputStream getConfigInputStream() {
+	protected InputStream getConfigInputStream() {
 		StringBuilder strb = new StringBuilder();
 		append(strb, "ControlPort", torControlPort);
 		append(strb, "CookieAuthentication", 1);

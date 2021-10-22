@@ -14,9 +14,9 @@ import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.LocationUtils;
 import org.briarproject.bramble.api.system.ResourceProvider;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.Executor;
@@ -29,6 +29,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
+import static org.briarproject.bramble.api.nullsafety.NullSafety.requireNonNull;
 import static org.briarproject.bramble.api.plugin.TorConstants.CONTROL_PORT;
 
 @NotNullByDefault
@@ -59,6 +60,29 @@ class WindowsTorPlugin extends JavaTorPlugin {
 
     protected File getTorExecutableFile() {
         return new File(torDirectory, "tor.exe");
+    }
+
+    protected InputStream getConfigInputStream() {
+        ClassLoader cl = getClass().getClassLoader();
+        InputStream inputStream = requireNonNull(cl.getResourceAsStream("torrc"));
+        InputStream windowsPaths = new ByteArrayInputStream(getTorrcPaths());
+        inputStream = new SequenceInputStream(inputStream, windowsPaths);
+        return inputStream;
+    }
+
+    private byte[] getTorrcPaths() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("GeoIPFile ");
+        sb.append(geoIpFile.getAbsolutePath());
+        sb.append("\n");
+        sb.append("GeoIPv6File ");
+        sb.append(geoIpFile.getAbsolutePath());
+        sb.append("6");
+        sb.append("\n");
+        sb.append("DataDirectory ");
+        sb.append(torDirectory);
+        sb.append("\\.tor");
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
