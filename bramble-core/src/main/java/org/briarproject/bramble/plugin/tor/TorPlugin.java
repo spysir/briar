@@ -396,7 +396,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 
 	private InputStream getObfs4InputStream() throws IOException {
 		InputStream in = resourceProvider
-				.getResourceInputStream("obfs4proxy_" + architecture, ".zip");
+				.getResourceInputStream("obfs4proxy_" + "linux-x86_64", ".zip");
 		ZipInputStream zin = new ZipInputStream(in);
 		if (zin.getNextEntry() == null) throw new IOException();
 		return zin;
