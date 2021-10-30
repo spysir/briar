@@ -72,6 +72,7 @@ class WindowsTorPlugin extends JavaTorPlugin {
 
     private byte[] getTorrcPaths() {
         StringBuilder sb = new StringBuilder();
+        sb.append("\n");
         sb.append("GeoIPFile ");
         sb.append(geoIpFile.getAbsolutePath());
         sb.append("\n");
