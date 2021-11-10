@@ -16,6 +16,7 @@ import org.briarproject.bramble.api.system.ResourceProvider;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Scanner;
@@ -29,33 +30,33 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
-import static org.briarproject.bramble.api.nullsafety.NullSafety.requireNonNull;
-import static org.briarproject.bramble.api.plugin.TorConstants.CONTROL_PORT;
 
 @NotNullByDefault
 class WindowsTorPlugin extends JavaTorPlugin {
 
     WindowsTorPlugin(Executor ioExecutor,
-                  Executor wakefulIoExecutor,
-                  NetworkManager networkManager,
-                  LocationUtils locationUtils,
-                  SocketFactory torSocketFactory,
-                  Clock clock,
-                  ResourceProvider resourceProvider,
-                  CircumventionProvider circumventionProvider,
-                  BatteryManager batteryManager,
-                  Backoff backoff,
-                  TorRendezvousCrypto torRendezvousCrypto,
-                  PluginCallback callback,
-                  String architecture,
-                  long maxLatency,
-                  int maxIdleTime,
-                  File torDirectory) {
+              Executor wakefulIoExecutor,
+              NetworkManager networkManager,
+              LocationUtils locationUtils,
+              SocketFactory torSocketFactory,
+              Clock clock,
+              ResourceProvider resourceProvider,
+              CircumventionProvider circumventionProvider,
+              BatteryManager batteryManager,
+              Backoff backoff,
+              TorRendezvousCrypto torRendezvousCrypto,
+              PluginCallback callback,
+              String architecture,
+              long maxLatency,
+              int maxIdleTime,
+              File torDirectory,
+              int torSocksPort,
+              int torControlPort) {
         super(ioExecutor, wakefulIoExecutor, networkManager, locationUtils,
                 torSocketFactory, clock, resourceProvider,
                 circumventionProvider, batteryManager, backoff,
                 torRendezvousCrypto, callback, architecture,
-                maxLatency, maxIdleTime, torDirectory);
+                maxLatency, maxIdleTime, torDirectory, torSocksPort, torControlPort);
     }
 
     protected File getTorExecutableFile() {
@@ -63,8 +64,15 @@ class WindowsTorPlugin extends JavaTorPlugin {
     }
 
     protected InputStream getConfigInputStream() {
-        ClassLoader cl = getClass().getClassLoader();
-        InputStream inputStream = requireNonNull(cl.getResourceAsStream("torrc"));
+        StringBuilder strb = new StringBuilder();
+        append(strb, "ControlPort", torControlPort);
+        append(strb, "CookieAuthentication", 1);
+        append(strb, "DisableNetwork", 1);
+        append(strb, "RunAsDaemon", 1);
+        append(strb, "SafeSocks", 1);
+        append(strb, "SocksPort", torSocksPort);
+        InputStream inputStream = new ByteArrayInputStream(
+                strb.toString().getBytes(Charset.forName("UTF-8")));
         InputStream windowsPaths = new ByteArrayInputStream(getTorrcPaths());
         inputStream = new SequenceInputStream(inputStream, windowsPaths);
         return inputStream;
@@ -169,7 +177,7 @@ class WindowsTorPlugin extends JavaTorPlugin {
         }
         try {
             // Open a control connection and authenticate using the cookie file
-            controlSocket = new Socket("127.0.0.1", CONTROL_PORT);
+            controlSocket = new Socket("127.0.0.1", torControlPort);
             controlConnection = new TorControlConnection(controlSocket);
             controlConnection.authenticate(read(cookieFile));
             // Tell Tor to exit when the control connection is closed

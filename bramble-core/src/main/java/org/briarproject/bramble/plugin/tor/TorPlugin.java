@@ -137,11 +137,11 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 	final File torDirectory;
 	final File geoIpFile;
 	final File configFile;
-	private int torSocksPort;
-	private int torControlPort;
+	int torSocksPort;
+	int torControlPort;
 	private final File doneFile;
 	final File cookieFile;
-	private final AtomicBoolean used = new AtomicBoolean(false);
+	final AtomicBoolean used = new AtomicBoolean(false);
 
 	protected final PluginState state = new PluginState();
 
@@ -402,7 +402,7 @@ abstract class TorPlugin implements DuplexPlugin, EventHandler, EventListener {
 		return zin;
 	}
 
-	private static void append(StringBuilder strb, String name, int value) {
+	protected static void append(StringBuilder strb, String name, int value) {
 		strb.append(name);
 		strb.append(" ");
 		strb.append(value);

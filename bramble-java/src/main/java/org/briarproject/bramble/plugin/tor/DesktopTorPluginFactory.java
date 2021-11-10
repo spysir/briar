@@ -160,7 +160,7 @@ public class DesktopTorPluginFactory implements DuplexPluginFactory {
 				networkManager, locationUtils, torSocketFactory, clock,
 				resourceProvider, circumventionProvider, batteryManager,
 				backoff, torRendezvousCrypto, callback, architecture,
-				MAX_LATENCY, MAX_IDLE_TIME, torDirectory);
+				MAX_LATENCY, MAX_IDLE_TIME, torDirectory, torSocksPort, torControlPort);
 		eventBus.addListener(plugin);
 		return plugin;
 	}
